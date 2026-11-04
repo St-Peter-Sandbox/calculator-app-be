@@ -1,0 +1,25 @@
+meta {
+  name: DivideByZero
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{BASE_URL}}/api/calculate
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "operand1": 20,
+    "operand2": 0,
+    "operation": "divide"
+  }
+}
+
+assert {
+  res.status: eq 400
+  res.body.isSuccess: eq false
+  res.body.errorMessage: eq Cannot divide by zero
+}
