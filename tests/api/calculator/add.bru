@@ -1,0 +1,25 @@
+meta {
+  name: Add
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{BASE_URL}}/api/calculate
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "operand1": 5,
+    "operand2": 3,
+    "operation": "add"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.result: eq 8
+  res.body.isSuccess: eq true
+}

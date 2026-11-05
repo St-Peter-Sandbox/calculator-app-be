@@ -1,0 +1,13 @@
+meta {
+  name: History
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{BASE_URL}}/api/history
+}
+
+assert {
+  res.status: eq 200
+}

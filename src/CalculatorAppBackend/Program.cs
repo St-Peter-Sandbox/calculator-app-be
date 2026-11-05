@@ -5,6 +5,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Registered as an interface so a test can replace it without replacing
 // the host. A concrete registration would leave nothing to substitute.
 builder.Services.AddSingleton<IServiceStatus, ServiceStatus>();
+builder.Services.AddSingleton<ICalculatorService, CalculatorService>();
+builder.Services.AddSingleton<ICalculationHistory, CalculationHistory>();
 
 // Describes the API so the contract tests have something to generate
 // from. Document only — Swagger UI is a separate package and is not
@@ -23,6 +25,7 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 var app = builder.Build();
 
 app.UseCors();
+app.MapOpenApi();
 
 // The production gate probes /health after a deployment, so this endpoint
 // is part of the pipeline contract rather than a convenience.
@@ -36,6 +39,36 @@ app.MapGet("/health", (IServiceStatus status) =>
 
 app.MapGet("/", () => Results.Ok(new HealthResponse("ready", ServiceInfo.Name)))
    .Produces<HealthResponse>(StatusCodes.Status200OK);
+
+app.MapPost("/api/calculate", (CalculationRequest request, ICalculatorService calculator, ICalculationHistory history) =>
+{
+    var result = calculator.Calculate(request.Operand1, request.Operand2, request.Operation);
+    if (!result.IsSuccess)
+    {
+        return Results.BadRequest(result);
+    }
+
+    history.Add(new HistoryItem(
+        Guid.NewGuid().ToString("N"),
+        result.Equation,
+        result.Result!.Value,
+        DateTime.UtcNow));
+
+    return Results.Ok(result);
+})
+.Produces<CalculationResult>(StatusCodes.Status200OK)
+.Produces<CalculationResult>(StatusCodes.Status400BadRequest);
+
+app.MapGet("/api/history", (ICalculationHistory history) =>
+    Results.Ok(history.GetAll()))
+   .Produces<IReadOnlyList<HistoryItem>>(StatusCodes.Status200OK);
+
+app.MapDelete("/api/history", (ICalculationHistory history) =>
+{
+    history.Clear();
+    return Results.NoContent();
+})
+.Produces(StatusCodes.Status204NoContent);
 
 app.Run();
 
